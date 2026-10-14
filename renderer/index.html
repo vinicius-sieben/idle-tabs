@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Idle Tabs</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <h1>Idle Tabs</h1>
+    <span class="subtitle">4 contas independentes em painéis isolados</span>
+  <div class="toolbar-group layout-group">
+    <label>Layout:
+      <select id="layout-select" aria-label="Layout do grid">
+        <option value="2x2">2×2</option>
+        <option value="1x4">1×4</option>
+        <option value="4x1">4×1</option>
+      </select>
+    </label>
+    <label>Exibir:
+      <select id="visible-count" aria-label="Quantidade de painéis visíveis">
+        <option value="4">4 painéis</option>
+        <option value="2">2 painéis</option>
+        <option value="1">1 painel</option>
+      </select>
+    </label>
+    <button id="restore-grid" type="button" class="secondary">Restaurar grade</button>
+  </div>
+  <label class="toggle settings-toggle">
+      <input type="checkbox" id="allow-scripts" />
+      Permitir scripts de automação
+    </label>
+  </header>
+<svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-reload" viewBox="0 0 24 24"><path d="M17.65 6.35A8 8 0 1 0 19.3 14h-2.09A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L14 10h6V4l-2.35 2.35z"/></symbol>
+  <symbol id="ic-new-window" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></symbol>
+  <symbol id="ic-maximize" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zm-3-12v2h3v3h2V5h-5z"/></symbol>
+  <symbol id="ic-hide" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.8 11.8 0 0 0 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zm7.53 7.53 1.54 1.54c-.06.1-.08.21-.07.33-.01.3.03.59.11.86.27.08.56.12.86.11.12.01.23-.01.33-.07l1.54 1.54c-.55.3-1.18.47-1.86.47-2 0-3.5-1.5-3.5-3.5 0-.68.17-1.31.48-1.86l-.43-.42z"/></symbol>
+  <symbol id="ic-clear" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12 1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4h-3.5z"/></symbol>
+</svg>
+
+
+  <main class="grid">
+    <!-- Painel 0 -->
+    <section class="panel" data-index="0">
+      <div class="panel-head">
+        <input id="name-0" class="name" type="text" placeholder="Conta 1" aria-label="Nome do painel 1" />
+        <input id="url-0" class="url" type="url" placeholder="Cole o link do jogo..." aria-label="Link do jogo (painel 1)" />
+        <button id="reload-0" type="button" title="Recarregar" aria-label="Recarregar"><svg class="btn-icon"><use href="#ic-reload"/></svg></button>
+        <button id="new-window-0" type="button" class="secondary" title="Nova janela" aria-label="Nova janela"><svg class="btn-icon"><use href="#ic-new-window"/></svg></button>
+        <span class="btn-sep"></span>
+        <button id="maximize-0" type="button" class="secondary maximize" title="Maximizar" aria-label="Maximizar"><svg class="btn-icon"><use href="#ic-maximize"/></svg></button>
+        <button id="hide-0" type="button" class="secondary hide" title="Ocultar" aria-label="Ocultar"><svg class="btn-icon"><use href="#ic-hide"/></svg></button>
+        <button id="clear-0" type="button" class="secondary" title="Limpar sessão" aria-label="Limpar sessão"><svg class="btn-icon"><use href="#ic-clear"/></svg></button>
+      </div>
+      <div id="status-0" class="status"></div>
+      <webview id="webview-0" data-index="0" partition="persist:panel0" src="about:blank"></webview>
+    </section>
+
+    <!-- Painel 1 -->
+    <section class="panel" data-index="1">
+      <div class="panel-head">
+        <input id="name-1" class="name" type="text" placeholder="Conta 2" aria-label="Nome do painel 2" />
+        <input id="url-1" class="url" type="url" placeholder="Cole o link do jogo..." aria-label="Link do jogo (painel 2)" />
+        <button id="reload-1" type="button" title="Recarregar" aria-label="Recarregar"><svg class="btn-icon"><use href="#ic-reload"/></svg></button>
+        <button id="new-window-1" type="button" class="secondary" title="Nova janela" aria-label="Nova janela"><svg class="btn-icon"><use href="#ic-new-window"/></svg></button>
+        <span class="btn-sep"></span>
+        <button id="maximize-1" type="button" class="secondary maximize" title="Maximizar" aria-label="Maximizar"><svg class="btn-icon"><use href="#ic-maximize"/></svg></button>
+        <button id="hide-1" type="button" class="secondary hide" title="Ocultar" aria-label="Ocultar"><svg class="btn-icon"><use href="#ic-hide"/></svg></button>
+        <button id="clear-1" type="button" class="secondary" title="Limpar sessão" aria-label="Limpar sessão"><svg class="btn-icon"><use href="#ic-clear"/></svg></button>
+      </div>
+      <div id="status-1" class="status"></div>
+      <webview id="webview-1" data-index="1" partition="persist:panel1" src="about:blank"></webview>
+    </section>
+
+    <!-- Painel 2 -->
+    <section class="panel" data-index="2">
+      <div class="panel-head">
+        <input id="name-2" class="name" type="text" placeholder="Conta 3" aria-label="Nome do painel 3" />
+        <input id="url-2" class="url" type="url" placeholder="Cole o link do jogo..." aria-label="Link do jogo (painel 3)" />
+        <button id="reload-2" type="button" title="Recarregar" aria-label="Recarregar"><svg class="btn-icon"><use href="#ic-reload"/></svg></button>
+        <button id="new-window-2" type="button" class="secondary" title="Nova janela" aria-label="Nova janela"><svg class="btn-icon"><use href="#ic-new-window"/></svg></button>
+        <span class="btn-sep"></span>
+        <button id="maximize-2" type="button" class="secondary maximize" title="Maximizar" aria-label="Maximizar"><svg class="btn-icon"><use href="#ic-maximize"/></svg></button>
+        <button id="hide-2" type="button" class="secondary hide" title="Ocultar" aria-label="Ocultar"><svg class="btn-icon"><use href="#ic-hide"/></svg></button>
+        <button id="clear-2" type="button" class="secondary" title="Limpar sessão" aria-label="Limpar sessão"><svg class="btn-icon"><use href="#ic-clear"/></svg></button>
+      </div>
+      <div id="status-2" class="status"></div>
+      <webview id="webview-2" data-index="2" partition="persist:panel2" src="about:blank"></webview>
+    </section>
+
+    <!-- Painel 3 -->
+    <section class="panel" data-index="3">
+      <div class="panel-head">
+        <input id="name-3" class="name" type="text" placeholder="Conta 4" aria-label="Nome do painel 4" />
+        <input id="url-3" class="url" type="url" placeholder="Cole o link do jogo..." aria-label="Link do jogo (painel 4)" />
+        <button id="reload-3" type="button" title="Recarregar" aria-label="Recarregar"><svg class="btn-icon"><use href="#ic-reload"/></svg></button>
+        <button id="new-window-3" type="button" class="secondary" title="Nova janela" aria-label="Nova janela"><svg class="btn-icon"><use href="#ic-new-window"/></svg></button>
+        <span class="btn-sep"></span>
+        <button id="maximize-3" type="button" class="secondary maximize" title="Maximizar" aria-label="Maximizar"><svg class="btn-icon"><use href="#ic-maximize"/></svg></button>
+        <button id="hide-3" type="button" class="secondary hide" title="Ocultar" aria-label="Ocultar"><svg class="btn-icon"><use href="#ic-hide"/></svg></button>
+        <button id="clear-3" type="button" class="secondary" title="Limpar sessão" aria-label="Limpar sessão"><svg class="btn-icon"><use href="#ic-clear"/></svg></button>
+      </div>
+      <div id="status-3" class="status"></div>
+      <webview id="webview-3" data-index="3" partition="persist:panel3" src="about:blank"></webview>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

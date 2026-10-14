@@ -1,0 +1,237 @@
+:root {
+  --bg: #0f0f13;
+  --bg-elev: #15151d;
+  --card: #1a1a22;
+  --border: #2a2a35;
+  --text: #e6e6ec;
+  --muted: #9a9ab0;
+  --accent: #4f7cff;
+  --accent-hover: #6a92ff;
+  --danger: #c0392b;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.toolbar h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 12px;
+  flex: 1;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input { cursor: pointer; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  height: calc(100vh - 52px);
+}
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.panel-head {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-head input {
+  background: #12121a;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+
+.panel-head input:focus {
+  border-color: var(--accent);
+}
+
+.panel-head .name {
+  width: 120px;
+  min-width: 90px;
+}
+
+.panel-head .url {
+  flex: 1 1 160px;
+  min-width: 120px;
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s ease;
+  white-space: nowrap;
+}
+
+button:hover { background: var(--accent-hover); }
+button:active { transform: translateY(1px); }
+
+button.secondary {
+  background: #3a3a4a;
+}
+
+button.secondary:hover {
+  background: #4a4a5c;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 10px 6px;
+  min-height: 20px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+webview {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+/* Layouts selecionáveis */
+.grid.layout-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.grid.layout-1x4 { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; }
+.grid.layout-4x1 { grid-template-columns: 1fr; grid-template-rows: repeat(4, 1fr); }
+
+/* Painel oculto (mantém rodando, apenas sai da tela) */
+.panel.is-hidden {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 1200px;
+  height: 800px;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+}
+
+/* Painel maximizado */
+.panel.is-maximized {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  z-index: 5;
+}
+
+.panel.is-focused .panel-head {
+  background: rgba(79, 124, 255, 0.08);
+}
+
+.panel-head button.maximize,
+.panel-head button.hide {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+
+
+/* Organizacao de toolbar */
+.toolbar {
+  gap: 10px 14px;
+}
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-toggle {
+  margin-left: auto;
+}
+
+/* Separador entre grupos de botoes do painel */
+.btn-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 2px;
+  display: inline-block;
+}
+
+/* Cabecalho do painel mais organizado */
+.panel-head {
+  gap: 8px;
+  row-gap: 6px;
+}
+.panel-head .url {
+  min-width: 180px;
+}
+.panel-head button {
+  padding: 6px 10px;
+}
+
+/* Icones inline */
+.icon-sprite { display: none; }
+button svg.btn-icon,
+button svg { width: 16px; height: 16px; display: block; fill: currentColor; }
+
+/* Interface mais compacta */
+.toolbar { padding: 8px 12px; gap: 8px 12px; }
+.panel-head { padding: 6px; gap: 6px; row-gap: 4px; }
+.panel-head input { padding: 4px 6px; font-size: 12.5px; }
+.panel-head button { padding: 5px 6px; min-width: 30px; min-height: 28px; }
+.status { padding: 2px 8px 4px; min-height: 16px; font-size: 11.5px; }
+.toolbar h1 { font-size: 16px; }
+.subtitle { font-size: 11px; }
