@@ -327,5 +327,57 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ((url || '').trim()) loadPanel(i);
   });
 
+  const extEnabled = $('ext-enabled');
+  const extStatus = $('ext-status');
+  const extImportBtn = $('ext-import-chrome');
+  const extSelectBtn = $('ext-select-folder');
+
+  async function refreshExtStatus() {
+    try {
+      const st = await window.api.getExtensionStatus();
+      if (extEnabled) extEnabled.checked = !!st.enabled;
+      if (extStatus) {
+        if (st.loaded) extStatus.textContent = 'ativa';
+        else if (st.error) extStatus.textContent = 'erro';
+        else if (st.path) extStatus.textContent = 'desativada';
+        else extStatus.textContent = 'não importada';
+      }
+    } catch (e) {
+      if (extStatus) extStatus.textContent = 'erro';
+    }
+  }
+
+  if (extEnabled) {
+    extEnabled.addEventListener('change', async () => {
+      await window.api.setExtensionEnabled(extEnabled.checked).catch(() => null);
+      await refreshExtStatus();
+    });
+  }
+  if (extImportBtn) {
+    extImportBtn.addEventListener('click', async () => {
+      if (extStatus) extStatus.textContent = 'importando...';
+      const st = await window.api.importExtensionFromChrome().catch(() => null);
+      if (!st || !st.ok) {
+        if (extStatus) extStatus.textContent = (st && st.error) ? st.error : 'falha';
+      } else {
+        if (extEnabled) extEnabled.checked = true;
+      }
+      await refreshExtStatus();
+    });
+  }
+  if (extSelectBtn) {
+    extSelectBtn.addEventListener('click', async () => {
+      const st = await window.api.selectExtensionFolder().catch(() => null);
+      if (!st || !st.ok) {
+        if (extStatus) extStatus.textContent = (st && st.error) ? st.error : 'cancelado';
+      } else {
+        if (extEnabled) extEnabled.checked = true;
+      }
+      await refreshExtStatus();
+    });
+  }
+
+  refreshExtStatus();
+
   applyVisibility();
 });

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, shell, Menu, MenuItem, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, session, shell, Menu, MenuItem, clipboard, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const fsp = fs.promises;
@@ -16,6 +16,8 @@ function defaultConfig() {
     allowScripts: false,
     layoutPreset: '2x2',
     openLinksInNewWindow: false,
+    extensionEnabled: false,
+    extensionPath: '',
     panels: Array.from({ length: PANEL_COUNT }, (_, i) => ({
       id: i,
       name: `Conta ${i + 1}`,
@@ -36,6 +38,9 @@ async function readConfig() {
     if (!allowedLayouts.includes(parsed.layoutPreset)) parsed.layoutPreset = '2x2';
 
     if (typeof parsed.openLinksInNewWindow !== 'boolean') parsed.openLinksInNewWindow = false;
+
+    if (typeof parsed.extensionEnabled !== 'boolean') parsed.extensionEnabled = false;
+    if (typeof parsed.extensionPath !== 'string') parsed.extensionPath = '';
 
     if (!Array.isArray(parsed.panels) || parsed.panels.length !== PANEL_COUNT) {
       parsed.panels = defaultConfig().panels;
@@ -175,12 +180,126 @@ function createWindow() {
   });
 }
 
+const CHROME_EXT_ID = 'mhnplloljgchpfpcpbhmcokmnefodjnh';
+
+let loadedExtensionId = null;
+let loadedExtensionPath = null;
+
+function validateExtensionDir(dir) {
+  if (!dir || typeof dir !== 'string') return { ok: false, reason: 'Pasta inválida.' };
+  const manifestPath = path.join(dir, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) return { ok: false, reason: 'manifest.json não encontrado.' };
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (!manifest || typeof manifest !== 'object') return { ok: false, reason: 'manifest inválido.' };
+    return { ok: true, manifest };
+  } catch (e) {
+    return { ok: false, reason: 'manifest.json ilegível.' };
+  }
+}
+
+function browserExtensionRoots() {
+  const local = process.env.LOCALAPPDATA || '';
+  const roaming = process.env.APPDATA || '';
+  return [
+    path.join(local, 'Google', 'Chrome', 'User Data'),
+    path.join(local, 'Chromium', 'User Data'),
+    path.join(local, 'BraveSoftware', 'Brave-Browser', 'User Data'),
+    path.join(local, 'Microsoft', 'Edge', 'User Data'),
+    path.join(local, 'Vivaldi', 'User Data'),
+    path.join(roaming, 'Opera Software', 'Opera Stable'),
+    path.join(roaming, 'Opera Software', 'Opera GX Stable')
+  ];
+}
+
+function findBrowserExtensionDir() {
+  try {
+    for (const root of browserExtensionRoots()) {
+      if (!fs.existsSync(root)) continue;
+      let profiles = [];
+      try {
+        profiles = fs.readdirSync(root, { withFileTypes: true })
+          .filter(d => d.isDirectory())
+          .map(d => d.name);
+      } catch (e) {}
+      if (!profiles.length) profiles = [''];
+      for (const profile of profiles) {
+        const base = path.join(root, profile, 'Extensions', CHROME_EXT_ID);
+        if (!fs.existsSync(base)) continue;
+        let versions = [];
+        try {
+          versions = fs.readdirSync(base, { withFileTypes: true })
+            .filter(d => d.isDirectory())
+            .map(d => d.name)
+            .sort()
+            .reverse();
+        } catch (e) {}
+        for (const v of versions) {
+          const dir = path.join(base, v);
+          if (validateExtensionDir(dir).ok) return dir;
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function removeLoadedExtensions() {
+  if (!loadedExtensionId) return;
+  for (let i = 0; i < PANEL_COUNT; i++) {
+    try { session.fromPartition(`persist:panel${i}`).removeExtension(loadedExtensionId); } catch (e) {}
+  }
+  loadedExtensionId = null;
+  loadedExtensionPath = null;
+}
+
+async function applyExtensionState() {
+  if (!currentConfig) currentConfig = await readConfig();
+  const enabled = !!currentConfig.extensionEnabled;
+  const extPath = typeof currentConfig.extensionPath === 'string' ? currentConfig.extensionPath : '';
+
+  if (!enabled || !extPath) {
+    removeLoadedExtensions();
+    return { ok: true, enabled: false, path: extPath, loaded: false };
+  }
+
+  const valid = validateExtensionDir(extPath);
+  if (!valid.ok) {
+    removeLoadedExtensions();
+    return { ok: false, enabled, path: extPath, loaded: !!loadedExtensionId, error: valid.reason };
+  }
+
+  if (loadedExtensionId && loadedExtensionPath === extPath) {
+    return { ok: true, enabled, path: extPath, loaded: true };
+  }
+
+  removeLoadedExtensions();
+  try {
+    const ext = await session.fromPartition('persist:panel0').loadExtension(extPath);
+    loadedExtensionId = ext && ext.id ? ext.id : null;
+    loadedExtensionPath = extPath;
+    if (loadedExtensionId) {
+      for (let i = 1; i < PANEL_COUNT; i++) {
+        try { await session.fromPartition(`persist:panel${i}`).loadExtension(extPath); } catch (e) {}
+      }
+      return { ok: true, enabled, path: extPath, loaded: true, id: loadedExtensionId };
+    }
+    return { ok: false, enabled, path: extPath, loaded: false, error: 'Falha ao carregar extensão.' };
+  } catch (e) {
+    removeLoadedExtensions();
+    return { ok: false, enabled, path: extPath, loaded: false, error: e && e.message ? e.message : String(e) };
+  }
+}
+
 app.whenReady().then(async () => {
   for (let i = 0; i < PANEL_COUNT; i++) {
     sessionToPanel.set(session.fromPartition(`persist:panel${i}`), i);
   }
   currentConfig = await readConfig();
   await ensureScriptsDir();
+  await applyExtensionState();
   createWindow();
 
   app.on('web-contents-created', (_event, contents) => {
@@ -255,6 +374,8 @@ ipcMain.handle('config:set', async (_event, cfg) => {
     allowScripts: !!cfg?.allowScripts,
     layoutPreset: ['2x2', '1x4', '4x1'].includes(cfg?.layoutPreset) ? cfg.layoutPreset : '2x2',
     openLinksInNewWindow: !!cfg?.openLinksInNewWindow,
+    extensionEnabled: !!cfg?.extensionEnabled,
+    extensionPath: typeof cfg?.extensionPath === 'string' ? cfg.extensionPath : '',
     panels: defaultConfig().panels.map((_, i) => {
       const p = Array.isArray(cfg?.panels) ? cfg.panels[i] : null;
       return {
@@ -301,6 +422,65 @@ ipcMain.handle('windows:openCurrent', async (_event, panelIndex) => {
   if (!/^https?:\/\//i.test(url) || url === 'about:blank') return false;
   openChildWindow(url, idx);
   return true;
+});
+
+ipcMain.handle('extensions:status', async () => {
+  if (!currentConfig) currentConfig = await readConfig();
+  const status = await applyExtensionState();
+  return {
+    enabled: !!currentConfig.extensionEnabled,
+    path: currentConfig.extensionPath || '',
+    loaded: !!status.loaded,
+    loadedId: loadedExtensionId,
+    chromePath: findBrowserExtensionDir(),
+    error: status.error || null
+  };
+});
+
+ipcMain.handle('extensions:setEnabled', async (_event, value) => {
+  if (!currentConfig) currentConfig = await readConfig();
+  currentConfig.extensionEnabled = !!value;
+  await writeConfig(currentConfig);
+  const status = await applyExtensionState();
+  return {
+    enabled: !!currentConfig.extensionEnabled,
+    path: currentConfig.extensionPath || '',
+    loaded: !!status.loaded,
+    error: status.error || null
+  };
+});
+
+ipcMain.handle('extensions:importChrome', async () => {
+  if (!currentConfig) currentConfig = await readConfig();
+  const src = findBrowserExtensionDir();
+  if (!src) {
+    return { ok: false, error: 'Extensão /hunt não encontrada no Chrome.' };
+  }
+  const dest = userDataPath('extensions', 'pokeidle');
+  try { fs.rmSync(dest, { recursive: true, force: true }); } catch (e) {}
+  try { fs.mkdirSync(path.dirname(dest), { recursive: true }); } catch (e) {}
+  try { fs.cpSync(src, dest, { recursive: true, force: true }); } catch (e) {
+    return { ok: false, error: 'Falha ao copiar extensão do Chrome.' };
+  }
+  currentConfig.extensionPath = dest;
+  currentConfig.extensionEnabled = true;
+  await writeConfig(currentConfig);
+  const status = await applyExtensionState();
+  return { ok: true, path: dest, loaded: !!status.loaded, error: status.error || null };
+});
+
+ipcMain.handle('extensions:selectFolder', async () => {
+  if (!currentConfig) currentConfig = await readConfig();
+  const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths || !result.filePaths[0]) return { ok: false, error: 'Cancelado.' };
+  const selected = result.filePaths[0];
+  const valid = validateExtensionDir(selected);
+  if (!valid.ok) return { ok: false, error: valid.reason };
+  currentConfig.extensionPath = selected;
+  currentConfig.extensionEnabled = true;
+  await writeConfig(currentConfig);
+  const status = await applyExtensionState();
+  return { ok: true, path: selected, loaded: !!status.loaded, error: status.error || null };
 });
 
 ipcMain.handle('automation:execute', async (_event, panelIndex, code) => {

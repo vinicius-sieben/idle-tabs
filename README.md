@@ -104,3 +104,10 @@ idle-tabs/
 - Cada painel possui botão 'Nova janela' que abre a página atual em uma janela auxiliar com a mesma conta.
 - Clique com o botão direito em um link/página para abrir em nova janela, copiar link ou recarregar.
 - Pop-ups (window.open/	arget=_blank) abrem internamente com a mesma sessão.
+
+
+## Extensão /hunt (PokeIdle)
+- Ative 'Extensão /hunt' na interface.
+- Clique em 'Importar Chrome' para copiar automaticamente a extensão instalada do Chrome; ou 'Pasta' para selecionar manualmente a pasta desempacotada.
+- A extensão carrega em todos os painéis, mantendo a conta de cada um.
+- Requer a extensão /hunt instalada no Chrome (ou pasta equivalente).
