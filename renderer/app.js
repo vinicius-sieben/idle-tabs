@@ -89,6 +89,8 @@ function applyVisibility() {
   if (panels[focusedPanel] && panels[focusedPanel].panelEl) {
     panels[focusedPanel].panelEl.classList.add('is-focused');
   }
+  refreshAccountStrip();
+  refreshSidebar();
 }
 
 function attachWebview(i) {
@@ -114,6 +116,8 @@ function attachWebview(i) {
     if (panels[i].status.textContent === 'Carregando...') {
       setStatus(i, '');
     }
+    refreshAccountStrip();
+    refreshSidebar();
   });
 
   wv.addEventListener('did-fail-load', (e) => {
@@ -150,8 +154,8 @@ function loadPanel(i) {
 function setupPanel(i) {
   const p = panels[i];
 
-  p.nameInput.addEventListener('input', scheduleSave);
-  p.urlInput.addEventListener('input', scheduleSave);
+  p.nameInput.addEventListener('input', () => { scheduleSave(); refreshAccountStrip(); refreshSidebar(); });
+  p.urlInput.addEventListener('input', () => { scheduleSave(); refreshAccountStrip(); });
 
   p.urlInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -222,6 +226,73 @@ function setupPanel(i) {
       applyVisibility();
     }
   });
+}
+
+function hostLabel(url) {
+  try {
+    return new URL(url).hostname || '—';
+  } catch (e) {
+    return url ? '—' : '—';
+  }
+}
+
+function accountStatusText(i) {
+  const p = panels[i];
+  if (p.panelEl.classList.contains('is-hidden')) return 'Oculta';
+  const url = p.webview.getURL();
+  if (!url || url === 'about:blank') return 'Inativa';
+  return 'Ativa';
+}
+
+function refreshAccountStrip() {
+  panels.forEach((p, i) => {
+    const card = document.querySelector('#account-card-' + i);
+    const nameEl = document.querySelector('#account-name-' + i);
+    const statusEl = document.querySelector('#account-status-' + i);
+    const urlEl = document.querySelector('#account-url-' + i);
+    if (nameEl) nameEl.textContent = (p.nameInput.value || '').trim() || ('Conta ' + (i + 1));
+    const url = p.webview.getURL();
+    if (statusEl) {
+      const st = accountStatusText(i);
+      statusEl.textContent = st;
+      statusEl.classList.toggle('inactive', st === 'Inativa');
+      statusEl.classList.toggle('hidden', st === 'Oculta');
+    }
+    if (urlEl) urlEl.textContent = (url && url !== 'about:blank') ? hostLabel(url) : '—';
+    if (card) card.classList.toggle('selected', focusedPanel === i);
+  });
+}
+
+function selectedModeText() {
+  if (maximizedPanel !== null) return 'Maximizada';
+  if (hiddenSet.has(focusedPanel)) return 'Oculta';
+  if (displayMode === 'one') return 'Foco';
+  if (displayMode === 'two') return '2 painéis';
+  return 'Grade';
+}
+
+function refreshSidebar() {
+  const p = panels[focusedPanel];
+  if (!p) return;
+  const nameEl = $('selected-name');
+  const statusEl = $('selected-status');
+  const urlEl = $('selected-url');
+  const modeEl = $('selected-mode');
+  if (nameEl) nameEl.textContent = (p.nameInput.value || '').trim() || ('Conta ' + (focusedPanel + 1));
+  const url = p.webview.getURL();
+  if (statusEl) {
+    const st = accountStatusText(focusedPanel);
+    statusEl.textContent = st;
+    statusEl.classList.toggle('inactive', st === 'Inativa');
+    statusEl.classList.toggle('hidden', st === 'Oculta');
+  }
+  if (urlEl) urlEl.textContent = (url && url !== 'about:blank') ? url : '—';
+  if (modeEl) modeEl.textContent = selectedModeText();
+}
+
+function refreshAllVisuals() {
+  refreshAccountStrip();
+  refreshSidebar();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -379,5 +450,105 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   refreshExtStatus();
 
+  for (let i = 0; i < PANEL_COUNT; i++) {
+    const card = document.querySelector('#account-card-' + i);
+    if (card) {
+      card.addEventListener('click', () => {
+        focusedPanel = i;
+        panels.forEach(pp => pp.panelEl.classList.remove('is-focused'));
+        if (panels[i] && panels[i].panelEl) panels[i].panelEl.classList.add('is-focused');
+        if (displayMode === 'one' || maximizedPanel !== null) {
+          // keep current visibility mode but move focus
+        }
+        applyVisibility();
+        refreshAllVisuals();
+      });
+    }
+  }
+
+  const viewAllBtn = $('account-view-all');
+  if (viewAllBtn) {
+    viewAllBtn.addEventListener('click', () => {
+      maximizedPanel = null;
+      hiddenSet.clear();
+      displayMode = 'all';
+      const vs = $('visible-count');
+      if (vs) vs.value = '4';
+      applyVisibility();
+      refreshAllVisuals();
+      scheduleSave();
+    });
+  }
+
+  const sidebarReload = $('sidebar-reload');
+  if (sidebarReload) sidebarReload.addEventListener('click', () => { loadPanel(focusedPanel); scheduleSave(); });
+  const sidebarNewWindow = $('sidebar-new-window');
+  if (sidebarNewWindow) sidebarNewWindow.addEventListener('click', async () => {
+    const ok = await window.api.openCurrentWindow(focusedPanel).catch(() => false);
+    setStatus(focusedPanel, ok ? 'Abrindo em nova janela...' : 'Nenhuma página carregada.');
+    setTimeout(() => { if (panels[focusedPanel] && panels[focusedPanel].status.textContent === 'Abrindo em nova janela...') setStatus(focusedPanel, ''); }, 2000);
+  });
+  const sidebarMaximize = $('sidebar-maximize');
+  if (sidebarMaximize) sidebarMaximize.addEventListener('click', () => {
+    maximizedPanel = focusedPanel;
+    displayMode = 'one';
+    const vs = $('visible-count');
+    if (vs) vs.value = '1';
+    applyVisibility();
+    refreshAllVisuals();
+    scheduleSave();
+  });
+  const sidebarHide = $('sidebar-hide');
+  if (sidebarHide) sidebarHide.addEventListener('click', () => {
+    if (hiddenSet.size < 3) {
+      hiddenSet.add(focusedPanel);
+      displayMode = 'custom';
+      applyVisibility();
+      refreshAllVisuals();
+      scheduleSave();
+    }
+  });
+  const sidebarClear = $('sidebar-clear');
+  if (sidebarClear) sidebarClear.addEventListener('click', async () => {
+    const p = panels[focusedPanel];
+    if (!p || !window.confirm('Limpar cookies e dados salvos desta conta?')) return;
+    try { await window.api.clearSession(focusedPanel); } catch (e) {}
+    try { p.webview.loadURL('about:blank'); } catch (e) {}
+    setStatus(focusedPanel, 'Sessão limpa.');
+    scheduleSave();
+    refreshAllVisuals();
+  });
+
+  const trayScripts = $('tray-scripts');
+  if (trayScripts) trayScripts.addEventListener('click', async () => {
+    const toggle = $('allow-scripts');
+    if (!toggle) return;
+    toggle.checked = !toggle.checked;
+    try { await window.api.setAllowScripts(toggle.checked); } catch (e) {}
+    scheduleSave();
+    refreshAllVisuals();
+  });
+  const trayExt = $('tray-ext');
+  if (trayExt) trayExt.addEventListener('click', async () => {
+    const t = $('ext-enabled');
+    if (!t) return;
+    t.checked = !t.checked;
+    await window.api.setExtensionEnabled(t.checked).catch(() => null);
+    await refreshExtStatus();
+    refreshAllVisuals();
+  });
+  const trayRestore = $('tray-restore');
+  if (trayRestore) trayRestore.addEventListener('click', () => {
+    maximizedPanel = null;
+    hiddenSet.clear();
+    displayMode = 'all';
+    const vs = $('visible-count');
+    if (vs) vs.value = '4';
+    applyVisibility();
+    refreshAllVisuals();
+    scheduleSave();
+  });
+
   applyVisibility();
+  refreshAllVisuals();
 });

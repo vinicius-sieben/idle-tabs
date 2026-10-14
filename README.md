@@ -111,3 +111,15 @@ idle-tabs/
 - Clique em 'Importar Chrome' para copiar automaticamente a extensão instalada do Chrome; ou 'Pasta' para selecionar manualmente a pasta desempacotada.
 - A extensão carrega em todos os painéis, mantendo a conta de cada um.
 - Requer a extensão /hunt instalada no Chrome (ou pasta equivalente).
+
+
+## Repaginação visual
+- Interface com identidade dark navy, faixa de contas, grade 2x2, sidebar de detalhes e barra de status.
+- Webviews mantidos no centro; painéis ocultos/maximizados continuam funcionando.
+
+
+## Build automático (GitHub Actions)
+- Workflow: \.github/workflows/build-windows.yml\.
+- Push para \main\ gera artefatos do Windows.
+- Tags \*\ também publicam Release automaticamente.
+- Pode ser executado manualmente em **Actions > Build Windows > Run workflow**.
