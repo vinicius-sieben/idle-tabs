@@ -581,3 +581,10 @@ webview {
 
 /* Sidebar removida: grade ocupa toda a largura */
 .workspace { grid-template-columns: 1fr; }
+
+/* Cartoes superiores compactos */
+.account-card { grid-template-columns: 1fr auto; padding: 6px 8px; gap: 6px; }
+.account-meta.compact-card-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.account-status { align-self: flex-start; }
+.account-card .account-url { font-size: 10.5px; margin-top: 0; }
+.shortcut.compact-shortcut { width: 18px; height: 18px; font-size: 10px; }

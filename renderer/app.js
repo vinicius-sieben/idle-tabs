@@ -247,10 +247,8 @@ function accountStatusText(i) {
 function refreshAccountStrip() {
   panels.forEach((p, i) => {
     const card = document.querySelector('#account-card-' + i);
-    const nameEl = document.querySelector('#account-name-' + i);
     const statusEl = document.querySelector('#account-status-' + i);
     const urlEl = document.querySelector('#account-url-' + i);
-    if (nameEl) nameEl.textContent = (p.nameInput.value || '').trim() || ('Conta ' + (i + 1));
     const url = p.webview.getURL();
     if (statusEl) {
       const st = accountStatusText(i);
@@ -457,11 +455,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         focusedPanel = i;
         panels.forEach(pp => pp.panelEl.classList.remove('is-focused'));
         if (panels[i] && panels[i].panelEl) panels[i].panelEl.classList.add('is-focused');
-        if (displayMode === 'one' || maximizedPanel !== null) {
-          // keep current visibility mode but move focus
-        }
+
+        // Clique na conta abre o painel maximizado
+        maximizedPanel = i;
+        hiddenSet.clear();
+        displayMode = 'one';
+        const vs = $('visible-count');
+        if (vs) vs.value = '1';
+
         applyVisibility();
         refreshAllVisuals();
+        scheduleSave();
       });
     }
   }
